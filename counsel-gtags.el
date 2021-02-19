@@ -80,6 +80,11 @@ This variable does not have any effect unless
 (defvaralias 'counsel-gtags-suggested-key-mapping 'counsel-gtags-use-suggested-key-map)
 (make-obsolete-variable 'counsel-gtags-suggested-key-mapping 'counsel-gtags-use-suggested-key-map "0.01")
 
+(defcustom counsel-gtags-custom-dbpath nil
+  "Allow users to set their GTAGSDBPATH so as to organize tag
+files to avoid polluting project ROOT."
+  :type 'string)
+
 (defconst counsel-gtags--prompts
   '((definition . "Find Definition: ")
     (reference  . "Find Reference: ")
@@ -360,13 +365,17 @@ Prompt for ROOTDIR and LABEL if not given.  This command is asynchronous."
    (list (read-directory-name "Directory: " nil nil t)
          (counsel-gtags--select-gtags-label)))
   (let* ((default-directory rootdir)
+         (default-dbpath (concat rootdir counsel-gtags-custom-dbpath))
          (proc-buf (get-buffer-create " *counsel-gtags-tag-create*"))
          (proc (start-file-process
                 "counsel-gtags-tag-create" proc-buf
-                "gtags" "-q" (concat "--gtagslabel=" label))))
+                "gtags" "-q" (concat "--gtagslabel=" label) default-dbpath)))
     (set-process-sentinel
      proc
-     (counsel-gtags--make-gtags-sentinel 'create))))
+     (counsel-gtags--make-gtags-sentinel 'create))
+    ;; create env for global
+    (setenv "GTAGSROOT" default-directory)
+    (setenv "GTAGSDBPATH" default-dbpath)))
 
 (defun counsel-gtags--real-file-name ()
   (let ((buffile (buffer-file-name)))
